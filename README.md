@@ -10,4 +10,4 @@ Description of programs:
 
 Run programs in this order:  formats.sas -> analdata.sas -> graphs_interventional_trials.sas.
 
-CAUTION:  Because AACT is a live database, the output created when the above programs are re-run will likely produce slightly different output than the results displayed in the files included in this repository.
+CAUTION:  Because AACT is a live database, the output created when the above programs are re-run will likely be slightly different than the results displayed in the output files included in this repository.

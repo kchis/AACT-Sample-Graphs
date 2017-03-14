@@ -9,3 +9,5 @@ Description of programs:
 -  graphs_interventional_trials.sas:  This program reads the dataset 'analdata.sas7bdat' created by 'analdata.sas' and outputs a graphical summary of the characteristics of interventional trials registered with ClinicalTrials.gov during the period of interest. This program creates the output file 'graphs_interventional_trials.pdf'.
 
 Run programs in this order:  formats.sas -> analdata.sas -> graphs_interventional_trials.sas.
+
+CAUTION:  Because AACT is a live database, the output created when the above programs are re-run will likely produce slightly different output than the results displayed in the files included in this repository.

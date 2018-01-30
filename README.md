@@ -1,7 +1,7 @@
 # AACT-Sample-Graphs
-This repository includes example graphs summarizing characteristics of interventional trials in ClinicalTrials.gov, 2008-2016
+This repository includes example graphs summarizing characteristics of interventional trials in ClinicalTrials.gov, 2008-2017
 
-Using the programs shared in this repository, I have summarized selected characteristics and time trends in interventional trials registered at ClinicalTrials.gov between 2008-2016 using the database for Aggregate Analysis of ClinicalTrials.gov (AACT), available at http://aact.ctti-clinicaltrials.org/.  I accessed the live AACT database and generated graphical summaries of the trial portfolio using SAS v. 9.4 on a Linux operating system. SAS code and output fiiles are shared in this repository.
+Using the programs shared in this repository, I have summarized selected characteristics and time trends in interventional trials registered at ClinicalTrials.gov between 2008-2017 using the database for Aggregate Analysis of ClinicalTrials.gov (AACT), available at http://aact.ctti-clinicaltrials.org/.  I accessed the live AACT database and generated graphical summaries of the trial portfolio using SAS v. 9.4 on a Linux operating system. SAS code and output fiiles are shared in this repository.
 
 Description of programs:
 -  formats.sas:  This program defines SAS formats and is sourced by other SAS programs.

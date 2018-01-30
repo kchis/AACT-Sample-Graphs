@@ -4,13 +4,13 @@ Project:  AACT
 Purpose:  Create analysis dataset to use for summary graphs
 Source:   analdata.sas
 Author:   K. Chiswell, Duke Clinical Research Institute
-Date:     2017/03/14
+Date:     2018/01/23
 -----------------------------------------------------------------------------
 */
 
 options formdlim='-';
 
-%let endyr = 2016;  * year when summary ends;
+%let endyr = 2017;  * year when summary ends;
 
 libname out "./";   * folder where the data set will be written;
 
@@ -21,7 +21,7 @@ libname out "./";   * folder where the data set will be written;
    http://aact.ctti-clinicaltrials.org/connect
  -------------------------------------------------------------------------- */
 
-%let server = aact-prod.cr4nrslb1lw7.us-east-1.rds.amazonaws.com;
+%let server = aact-db.ctti-clinicaltrials.org;
 
 *  specify the credentials for the postgres database;
 libname  
@@ -51,10 +51,19 @@ data nlmdt;
     call symput('nlmdt', compress(put(max_nlm_date, date9.)));
 run;
 
-
 /* --------------------------------------------------------------------------
    Extract records and derive variables for snapshot slides
  -------------------------------------------------------------------------- */
+%macro makemissing(varname, varlabel);
+* code missing values of character 0/1 variable as numeric and assign missing values to 99;
+   if &varname = "" then &varname._n=99;
+   else if &varname = "1" then &varname._n=1;
+   else if &varname = "0" then &varname._n=0;
+
+   label &varname._n = "&varlabel";
+   format &varname._n ynuf.;
+%mend makemissing;
+
 data analdata 
      ex_type ex_year;
 
@@ -62,7 +71,7 @@ data analdata
       (keep = 
          nct_id 
          study_type 
-         first_received_date 
+         study_first_submitted_date 
          start_date start_date_type
          updated_at 
          phase 
@@ -71,7 +80,18 @@ data analdata
          enrollment enrollment_type
          primary_completion_date primary_completion_date_type 
          completion_date completion_date_type 
-         first_received_results_date
+         results_first_submitted_date
+
+         /* new data elements */
+         /* many of these added for Final Rule implementation in Jan 2017 */
+         is_fda_regulated_drug
+         is_fda_regulated_device
+         is_unapproved_device
+         is_ppsd
+         is_us_export
+         
+         /* other newish data elements */
+         plan_to_share_ipd
        );
 
    * --- derivations ---;   
@@ -82,8 +102,17 @@ data analdata
    label download_date = 'Date when content was released from ClinicalTrials.gov';
 
    * registration year;
-   reg_year = year(first_received_date);
+   reg_year = year(study_first_submitted_date);
    label reg_year = "Year study registered at ClinicalTrials.gov";
+
+   * registration month;
+   reg_month = month(study_first_submitted_date);
+   label reg_month = "Month study registered at ClinicalTrials.gov";
+
+   * registration year_month as character;
+   length reg_year_month $7;
+   reg_year_month = put(reg_year, 4.)||"-"||put(reg_month, 2.);
+   label reg_year_month = "Year-Month study registered at ClinicalTrials.gov";
 
    * date when AACT was updated;
    aact_date = datepart(updated_at);
@@ -119,7 +148,23 @@ data analdata
    label phaseg = 'Study Phase';
    format phaseg phasef.;
 
-     
+   * categorize missing values of final rule variables;
+   %makemissing(varname=is_fda_regulated_drug, varlabel=Studies a US FDA regulated drug product);
+   %makemissing(varname=is_fda_regulated_device, varlabel=Studies a US FDA regulated device product);
+   %makemissing(varname=is_unapproved_device, varlabel=Device product not approved or cleared);
+   %makemissing(varname=is_ppsd, varlabel=Pediatric post market surveillance of device product);
+   %makemissing(varname=is_us_export, varlabel=Product manufactured in and exported from US);   
+   
+   * make numeric version of plan_to_share_ipd;
+   plan_to_share_ipd_n=.;
+   label plan_to_share_ipd_n = 'Plan to share Individual Participant Data';
+   format plan_to_share_ipd_n ynduf.;
+   if plan_to_share_ipd = "No" then plan_to_share_ipd_n=0;
+   else if plan_to_share_ipd = "Yes" then plan_to_share_ipd_n=1;
+   else if plan_to_share_ipd = "Undecided" then plan_to_share_ipd_n=2;
+   else if plan_to_share_ipd = "" then plan_to_share_ipd_n=99;
+
+
    * --- define variables for time to study completion analysis ---;
 
    comp_term = .;  * study has completed/terminated follow up for primary endpoint;
@@ -181,22 +226,22 @@ data analdata
    *  restrict to studies that were completed or terminated prior download_date;
    if overall_status in ('Terminated', 'Completed') then do;
 
-      if first_received_results_date >. then do;
+      if results_first_submitted_date >. then do;
 
           results_reported=1;
 
          if primary_completion_date>. then 
-            mntores_mod= ( month(first_received_results_date) + 12*year(first_received_results_date) ) - 
+            mntores_mod= ( month(results_first_submitted_date) + 12*year(results_first_submitted_date) ) - 
                          ( month(primary_completion_date) + 12*year(primary_completion_date) ) +1;
 
          else if completion_date>. then 
-            mntores_mod= ( month(first_received_results_date) + 12*year(first_received_results_date) ) - 
+            mntores_mod= ( month(results_first_submitted_date) + 12*year(results_first_submitted_date) ) - 
                          ( month(completion_date) + 12*year(completion_date) ) +1;
 
          end;
 
 
-      else if first_received_results_date =.  then do;
+      else if results_first_submitted_date =.  then do;
 
           results_reported=0;
 
@@ -374,6 +419,13 @@ data countries1;
 
    run;
    
+* --- new gender eligibility info ---;
+proc sql;
+   create table eligibilities as
+   select a.nct_id, a.gender, a.gender_based
+   from aact.eligibilities a
+   order by a.nct_id;
+   run;
 
 * --- combine data and make other derivations ---;
 data analdata;
@@ -420,6 +472,7 @@ proc freq data=analdata;
    tables funding * fundingo / list missing nopercent; 
    tables intervh * intervg / list missing nopercent;
    tables siteloc * us_site * nonus_site / list missing nopercent;
+   tables plan_to_share_ipd * plan_to_share_ipd_n / list missing nopercent;
    run;
 title;
 
@@ -462,7 +515,7 @@ proc freq data=ex_type;
    tables study_type / missing nopercent;
    run;
 
-title3 j=c "Exclude interventional studies registered <2008 and >2016";
+title3 j=c "Exclude interventional studies registered <2008 and >&endyr";
 footnote1 j=l "Extracted from &server (AACT) most recently updated on &aactdt, and based on content publicly released by NLM on &nlmdt..";
 footnote2 j=l "Summaries generated by:  %sysget(PWD)/%sysfunc(scan(&SYSPROCESSNAME,2)).sas on &sysdate &systime..";
 
@@ -471,7 +524,7 @@ proc freq data=ex_year;
    run;
 
 ods pdf close;
-
+title;
 
 /* --------------------------------------------------------------------------
    Save permanent dataset

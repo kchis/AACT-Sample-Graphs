@@ -4,7 +4,7 @@ Project:  AACT
 Purpose:  Formats for graphs
 Source:   formats.sas
 Author:   K. Chiswell, Duke Clinical Research Institute
-Date:     2017/03/09
+Date:     2018/01/10
 -----------------------------------------------------------------------------
 */
 
@@ -31,6 +31,13 @@ proc format;
    value ynuf
         0 = 'No'
         1 = 'Yes'
+       99 = 'Unknown'
+     ;
+
+   value ynduf
+        0 = 'No'
+        1 = 'Yes'
+        2 = 'Undecided'
        99 = 'Unknown'
      ;
 
